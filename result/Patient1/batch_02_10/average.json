@@ -1,0 +1,8 @@
+{
+  "num_ok_frames": 8,
+  "mean_selected_TRE_mm": 17.2121805536375,
+  "ic_pass_count": 2,
+  "ic_pass_rate": 0.25,
+  "generated_at": "2026-06-03T11:01:35",
+  "note": "Averages use script-selected final outputs only; posthoc_best is reported separately and is not used for inference selection."
+}

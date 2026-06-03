@@ -1,0 +1,9 @@
+# Runtime dependencies for scripts 01-07 and 11.
+# Install CUDA-enabled PyTorch separately or use the Dockerfile.
+
+numpy==1.26.4
+scipy==1.15.3
+matplotlib==3.10.3
+tqdm==4.67.1
+open3d==0.19.0
+opencv-contrib-python-headless==4.11.0.86

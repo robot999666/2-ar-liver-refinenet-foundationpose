@@ -1,0 +1,11 @@
+Method: FoundationPose
+Patient: Patient1
+Frame: 04
+STL: /workspace/AR/src_data/Registration Methods/FoundationPose/Patient1/04.stl
+TRE_mm: 15.5117007152
+IC: Failed
+IC_numeric: 0
+Selected_iter: 10
+Stop_reason: raw_score_no_improve
+Inference_selection: script_selected_raw_score_stop
+Evaluation_source: Python TRE/IC port of MATLAB debug metric

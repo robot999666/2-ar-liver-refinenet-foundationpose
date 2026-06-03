@@ -1,0 +1,2 @@
+frame,status,missing
+05,skipped_missing_inputs,lap_image=/workspace/AR/src_data/Dataset/Patient1/Lap Images/05.png; calibration=/workspace/AR/src_data/Dataset/Patient1/LUS Calibration and Pose/05.mat; seg_json=/workspace/AR/src_data/Dataset/Patient1/LUS Segmentation/json/05.json; contours=/workspace/AR/src_data/contours_and_models/Patient1/Annotations/05/koo/contours.xml

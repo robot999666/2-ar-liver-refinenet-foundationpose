@@ -1,0 +1,27 @@
+[2026-06-03 10:52:57] === 07. Inference + STL export ===
+[2026-06-03 10:52:57]   infer profile: coarse0p30_refine0p10_rawstop
+[2026-06-03 10:52:57]   frame: Patient1/02
+[2026-06-03 10:52:57]   B depth: /workspace/AR/data_case/Patient1/02/depth/da2_intraop.npy
+[2026-06-03 10:52:57]   allow zero depth: False
+[2026-06-03 10:52:57]   weight: /workspace/AR/result/Patient1/02/best.pth
+[2026-06-03 10:52:57]   UPDATE_MODE: right
+[2026-06-03 10:52:57]   damping: first_base_trans=0.400, first_base_rot=0.400, first_step=0.750, refine_trans=0.100, refine_rot=0.100, max_iter=10
+[2026-06-03 10:52:57]   step clip: max_trans=0.000 mm, max_rot=0.000 deg (0 disables)
+[2026-06-03 10:52:57]   stop: raw_trans<0.200 mm and raw_rot<0.200 deg for 2 consecutive step(s)
+[2026-06-03 10:52:57]   diverge: raw_trans>120.0 mm or raw_rot>45.0 deg or pose_drift>200.0 mm
+[2026-06-03 10:52:57]   extra stops: stop_drift=0.0 mm, raw_worsen_patience=1, raw_score_rot_weight=5.00
+[2026-06-03 10:52:57]   selection: best_by=last, accept_by_score=False, score_patience=0
+[2026-06-03 10:52:57]   log: /workspace/AR/data_case/Patient1/02/pred/infer.log
+[2026-06-03 10:52:57] Iter 00: contour_score=46.4087 mask_iou=0.0000
+[2026-06-03 10:52:58] Iter 01: raw_trans=73.9254 mm raw_rot=21.6916 deg | raw_score=182.3833 | damped_trans=22.1776 mm damped_rot=6.5075 deg | drift=22.1776 mm | contour_score=66.7659 mask_iou=0.0000
+[2026-06-03 10:52:59] Iter 02: raw_trans=38.1232 mm raw_rot=10.9769 deg | raw_score=93.0075 | damped_trans=3.8123 mm damped_rot=1.0975 deg | drift=25.9536 mm | contour_score=67.0456 mask_iou=0.0000
+[2026-06-03 10:52:59] Iter 03: raw_trans=23.5144 mm raw_rot=5.2163 deg | raw_score=49.5960 | damped_trans=2.3514 mm damped_rot=0.5219 deg | drift=28.0237 mm | contour_score=67.3396 mask_iou=0.0000
+[2026-06-03 10:53:00] Iter 04: raw_trans=20.9105 mm raw_rot=3.9796 deg | raw_score=40.8083 | damped_trans=2.0910 mm damped_rot=0.3976 deg | drift=29.7240 mm | contour_score=67.7134 mask_iou=0.0000
+[2026-06-03 10:53:01] Iter 05: raw_trans=20.3237 mm raw_rot=3.2583 deg | raw_score=36.6154 | damped_trans=2.0324 mm damped_rot=0.3263 deg | drift=30.7292 mm | contour_score=68.0083 mask_iou=0.0000
+[2026-06-03 10:53:01] Iter 06: raw_trans=31.0284 mm raw_rot=3.0715 deg | raw_score=46.3861 | damped_trans=3.1028 mm damped_rot=0.3065 deg | drift=32.1172 mm | contour_score=68.1547 mask_iou=0.0000
+[2026-06-03 10:53:01] [OK] raw update score did not improve for 1 step(s). best=36.6154 current=46.3861
+[2026-06-03 10:53:01] [OK] stop_reason: raw_score_no_improve
+[2026-06-03 10:53:01] [OK] selected_iter: 06 (last), contour_score=68.1547
+[2026-06-03 10:53:01] [OK] final_pose: /workspace/AR/data_case/Patient1/02/pred/final_pose.txt
+[2026-06-03 10:53:01] [OK] Evaluation STL: /workspace/AR/result/Patient1/02/evaluation/Registration Methods/FoundationPose/Patient1/02.stl
+[2026-06-03 10:53:01] [OK] MATLAB evaluation STL: /workspace/AR/src_data/Registration Methods/FoundationPose/Patient1/02.stl

@@ -1,0 +1,34 @@
+# Python/runtime noise
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Generated pipeline workspace
+data_case/
+
+# Large generated checkpoints from training; the curated best checkpoint is tracked with Git LFS.
+result/**/last.pth
+result/**/best_full.pth
+result/**/checkpoints/
+result/**/runs/
+
+# Depth Anything V2 checkpoint is too large for normal GitHub storage.
+weights/*.pth
+!weights/.gitkeep
+
+# Local packaging/output
+archives/
+history/
+github_release/
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# Local editor/system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

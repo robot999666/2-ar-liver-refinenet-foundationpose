@@ -1,0 +1,5 @@
+=== 02. Setup initial T_view ===
+  frame: Patient1/08
+[OK] T_view: /workspace/AR/data_case/Patient1/08/T_view.txt
+[OK] metadata: /workspace/AR/data_case/Patient1/08/T_view_meta.json
+[OK] debug: /workspace/AR/result/Patient1/08/debug/Patient1_08_tview_debug.png
