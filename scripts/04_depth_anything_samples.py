@@ -1,8 +1,8 @@
-"""Generate raw Depth Anything V2 arrays for rendered training samples.
+"""为渲染训练样本生成原始 Depth Anything V2 深度数组。
 
-Stored *_depth.npy arrays are raw DA2 outputs. Normalization is deferred to the
-shared train/validation/inference input pipeline so every mode uses the same
-deterministic mapping before train-only augmentation.
+保存的 *_depth.npy 是 DA2 原始输出。归一化统一延后到共享的
+train/validation/inference 输入流程中执行，从而保证所有模式先使用相同的
+确定性映射，再仅对训练数据进行增强。
 """
 
 import argparse
@@ -68,8 +68,12 @@ def process_split(split_dir, estimator, skip_existing: bool):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--skip-existing", action="store_true", help="skip if *_depth.npy exists")
+    parser = argparse.ArgumentParser(description="为渲染训练样本生成原始 DA2 深度。")
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="存在 *_depth.npy 时跳过该样本",
+    )
     args = parser.parse_args()
 
     case_dir = case_config.case_dir()

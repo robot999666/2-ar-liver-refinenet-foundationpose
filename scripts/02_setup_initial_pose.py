@@ -1,4 +1,4 @@
-"""Create and audit the initial object-to-camera pose for one prepared frame."""
+"""为一帧已预处理数据创建并审计初始 object-to-camera 位姿。"""
 
 import json
 import os
@@ -17,23 +17,22 @@ from shared.pose_render import PoseSampleRenderer, euler_to_matrix
 
 
 class Config:
-    """Script-02 settings.
+    """Script 02 配置。
 
-    Translation is in millimetres. Rotation is Euler degrees converted as
-    Rz @ Ry @ Rx. initial_pose.json and AR_TVIEW_* values override the fallback
-    pose, and their provenance is saved in T_view_meta.json.
+    平移单位为 mm，旋转使用 Euler 角（degree），并按 Rz @ Ry @ Rx 转换。
+    initial_pose.json 和 AR_TVIEW_* 可覆盖兜底位姿；参数来源会保存到
+    T_view_meta.json。
     """
 
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
     CASE_ROOT = _cc.CASE_ROOT
 
-    # Debug images are result artifacts, not generated case inputs.
+    # 调试图属于 result 结果，不属于生成病例输入。
     DEBUG_DIR = os.path.join(_cc.result_dir(), "preprocess")
     RENDER_CONTOUR_THICKNESS = _cc.CONTOUR_THICKNESS
 
-    # Used only when neither a per-frame JSON file nor environment overrides
-    # are present.
+    # 仅在没有逐帧 JSON 配置且没有环境变量覆盖时使用。
     DEFAULT_POSE = {
         "TX": 6.0,
         "TY": 27.0,

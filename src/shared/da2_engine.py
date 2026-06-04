@@ -1,4 +1,4 @@
-"""Depth Anything V2 inference only — raw model output, no post-processing."""
+"""仅执行 Depth Anything V2 推理：保留模型原始输出，不做后处理。"""
 
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def save_raw_depth(depth: np.ndarray, path: str):
 
 
 def save_depth_preview(depth: np.ndarray, path: str, mask: Optional[np.ndarray] = None):
-    """Visualization only; does not modify stored depth."""
+    """仅生成可视化预览，不修改已保存的深度。"""
     valid = np.isfinite(depth) & (depth > 0)
     if mask is not None:
         valid &= np.asarray(mask, dtype=bool)

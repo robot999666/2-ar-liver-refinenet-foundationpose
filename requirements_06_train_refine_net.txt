@@ -1,9 +1,8 @@
-# Runtime dependencies for scripts/06_train_refine_net.py on:
+# scripts/06_train_refine_net.py 在以下云端环境中的运行依赖：
 # pytorch / pytorch-2.5.1 / cuda12.4 / python3.12
 #
-# The image already provides CUDA-enabled PyTorch, so torch/torchvision/
-# torchaudio are intentionally omitted to avoid replacing the preinstalled
-# CUDA build with pip wheels.
+# 云端镜像已提供支持 CUDA 的 PyTorch，因此有意省略 torch/torchvision/
+# torchaudio，避免 pip wheel 覆盖预装的 CUDA 版本。
 
 numpy==1.26.4
 scipy==1.15.3

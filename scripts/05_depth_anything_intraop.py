@@ -1,8 +1,8 @@
-"""Generate audited and masked DA2 depth for one real intra-operative frame.
+"""为一帧真实术中图像生成经过审计和掩码处理的 DA2 深度。
 
-Requires a validated manual mask bundle from script 01b. The unmasked raw DA2
-output is retained only for audit. Inference depth is zero outside
-depth_valid_mask, and mask fingerprints let script 07 reject stale depth.
+必须先由 script 01b 生成并验证人工掩码包。未加掩码的 DA2 原始输出仅用于
+审计；推理深度在 depth_valid_mask 外统一置零，掩码指纹用于帮助 script 07
+拒绝由旧掩码生成的过期深度。
 """
 
 import json

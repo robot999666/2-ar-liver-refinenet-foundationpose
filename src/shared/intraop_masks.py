@@ -1,4 +1,4 @@
-"""Manual intra-operative liver masks and strict quality validation."""
+"""人工术中肝脏掩码及严格质量校验。"""
 
 import hashlib
 import json
@@ -26,7 +26,7 @@ DEFAULT_DEPTH_COVERAGE_MIN = float(os.environ.get("AR_DEPTH_COVERAGE_MIN", "0.95
 
 
 class MaskValidationError(ValueError):
-    """Raised when required real-image masks or masked depth are unsafe to use."""
+    """当真实图像掩码或掩码深度不满足安全使用条件时抛出。"""
 
 
 def mask_dir(case_dir):

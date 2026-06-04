@@ -1,8 +1,8 @@
-"""Prepare one source frame and its models for the rigid-pose pipeline.
+"""为刚性位姿流程准备一帧源图像及其模型。
 
-Reads only from src_data and writes generated artifacts to
-data_case/<patient_id>/<frame_id>. Changing its resolution, contour thickness,
-or coordinate conventions requires regenerating every downstream artifact.
+本脚本只读取 src_data，并将生成内容写入
+data_case/<patient_id>/<frame_id>。修改分辨率、轮廓线宽或坐标约定后，
+必须重新生成所有下游数据。
 """
 
 import os
@@ -23,30 +23,30 @@ from shared import case_config as _cc
 
 
 class Config:
-    """Script-01 settings; shared values are documented in case_config."""
+    """Script 01 配置；公共参数统一在 case_config 中说明。"""
 
-    # Source-frame selection. Override with PATIENT_ID and FRAME_ID.
+    # 源数据帧选择；可通过 PATIENT_ID 和 FRAME_ID 覆盖。
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
 
-    # Read-only source-data root and generated-case output root.
+    # 只读源数据根目录和生成病例数据根目录。
     DATA_ROOT = _cc.DATA_ROOT
     CASE_ROOT = _cc.CASE_ROOT
     ANNOTATOR = _cc.ANNOTATOR
     LAP_IMAGE_NAME = f"{FRAME_ID}.png"
 
-    # OpenCV undistortion alpha: 0 crops black borders; 1 keeps all pixels.
+    # OpenCV 去畸变 alpha：0 裁剪黑边，1 保留全部像素。
     UNDISTORT_ALPHA = 0.0
 
-    # Canonical downstream resolution. A change invalidates generated contours,
-    # masks, depth arrays, samples, and checkpoints.
+    # 下游流程统一使用的标准分辨率。修改后，已有轮廓、掩码、深度、
+    # 样本和 checkpoint 均不再兼容。
     WORK_WIDTH = _cc.WORK_WIDTH
     WORK_HEIGHT = _cc.WORK_HEIGHT
 
-    # Must match rendered contour thickness in scripts 02, 03, and 07.
+    # 必须与 scripts 02、03 和 07 的渲染轮廓线宽一致。
     CONTOUR_THICKNESS = _cc.CONTOUR_THICKNESS
 
-    # Published XML coordinates are one-based; OpenCV arrays are zero-based.
+    # 发布数据中的 XML 坐标从 1 开始；OpenCV 数组坐标从 0 开始。
     XML_COORDINATE_IS_ONE_BASED = True
 
 

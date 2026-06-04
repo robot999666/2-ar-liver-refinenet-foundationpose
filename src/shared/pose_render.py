@@ -1,4 +1,4 @@
-"""Open3D pose rendering: contours / mask / pseudo-lap RGB (DA2 input)."""
+"""使用 Open3D 渲染位姿：轮廓、mask 和 pseudo-lap RGB（DA2 输入）。"""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def project_points(points_obj, K, T_obj_to_cam, width, height):
 
 
 def metric_depth_to_pseudo_lap_bgr(depth_metric: np.ndarray, mask_uint8: np.ndarray) -> np.ndarray:
-    """Grayscale BGR image fed to Depth Anything (rendered sample / inference frame)."""
+    """生成供 Depth Anything 使用的灰度 BGR 图像（渲染样本或推理帧）。"""
     h, w = mask_uint8.shape[:2]
     bgr = np.zeros((h, w, 3), dtype=np.uint8)
     valid = mask_uint8 > 127
@@ -113,14 +113,15 @@ class PoseSampleRenderer:
             self.model_contours = json.load(f)
 
     def render(self, delta_T: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, List[str], np.ndarray]:
-        """
-        Returns:
-            contours (3,H,W) uint8,
-            mask uint8,
-            rgb_bgr uint8 (DA2 input),
-            T_render 4x4,
-            visible_types,
-            depth_metric float32
+        """渲染一个相对位姿。
+
+        返回：
+            contours：形状为 (3,H,W) 的 uint8 多通道轮廓；
+            mask：uint8 肝脏掩码；
+            rgb_bgr：作为 DA2 输入的 uint8 图像；
+            T_render：4x4 object-to-camera 位姿；
+            visible_types：当前可见的轮廓类型；
+            depth_metric：float32 metric depth。
         """
         T_render = self.T_view @ delta_T.astype(np.float32)
         T_c2w = np.linalg.inv(T_render)
@@ -159,6 +160,6 @@ class PoseSampleRenderer:
         return contours, mask, rgb_bgr, T_render, visible, depth_metric
 
     def render_at_pose(self, T_obj_to_cam: np.ndarray):
-        """Render using absolute object-to-camera pose (inference loop)."""
+        """使用绝对 object-to-camera 位姿渲染，供推理循环调用。"""
         delta_T = np.linalg.inv(self.T_view) @ T_obj_to_cam.astype(np.float32)
         return self.render(delta_T)

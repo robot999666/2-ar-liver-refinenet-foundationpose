@@ -1,4 +1,4 @@
-"""Interactive annotation of real-image liver and instrument-occlusion masks."""
+"""交互式标注真实图像中的完整肝脏区域和器械遮挡区域。"""
 
 import argparse
 import json
@@ -163,9 +163,9 @@ def load_existing_annotation(path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Interactively annotate full_liver_mask and instrument occlusions for one frame."
+        description="交互式标注一帧图像的 full_liver_mask 和器械遮挡区域。"
     )
-    parser.add_argument("--force", action="store_true", help="allow overwriting an existing annotation")
+    parser.add_argument("--force", action="store_true", help="允许覆盖已有标注")
     args = parser.parse_args()
 
     case_dir = case_config.case_dir()

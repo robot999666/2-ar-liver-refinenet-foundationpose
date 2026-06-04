@@ -1,6 +1,5 @@
-# Dockerfile installs the runtime only. Project code, source data, and weights
-# are mounted at /workspace/AR when the container starts, so do not send them
-# into the image build context.
+# Dockerfile 只安装运行环境。容器启动时，项目代码、源数据和权重会挂载到
+# /workspace/AR，因此无需将它们发送到镜像 build context。
 *
 !Dockerfile
 !requirements.txt

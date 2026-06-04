@@ -5,15 +5,14 @@ __pycache__/
 .vscode/
 tests/_runtime/
 
-# Generated case data and results are reproducible and intentionally excluded.
+# 生成的病例数据和结果可以重建，因此有意排除。
 data_case/*
 !data_case/README.md
 result/*
 !result/README.md
 
-# External/runtime assets. The curated RefineNet checkpoint is versioned;
-# the much larger DA2 checkpoint and wheelhouse are protected by checksums
-# and explicit restore commands documented in MANIFEST.md.
+# 外部运行资产。固定 RefineNet checkpoint 纳入版本控制；更大的 DA2 checkpoint
+# 和 wheelhouse 通过 checksum 以及 MANIFEST.md 中的明确恢复命令保护。
 archives/*.zip
 archives/wheelhouse/
 weights/*.pth

@@ -1,11 +1,11 @@
-"""Depth normalization and lightweight training-time augmentation."""
+"""深度归一化和轻量训练时增强。"""
 
 import cv2
 import numpy as np
 
 
 def depth_for_network_eval(depth_raw: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    """Shared deterministic depth mapping for train, val, and inference."""
+    """train、val 和 inference 共用的确定性深度映射。"""
     out = depth_raw.astype(np.float32).copy()
     mask_bool = mask > 0
     valid = np.isfinite(out) & (out > 0) & mask_bool
@@ -82,7 +82,7 @@ def add_depth_noise(depth: np.ndarray) -> np.ndarray:
 
 
 def augment_depth(depth_raw: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    """Normalize exactly like val/inference, then apply train-only dropout/noise."""
+    """先按 val/inference 的方式归一化，再应用仅用于训练的 dropout/noise。"""
     out = depth_for_network_eval(depth_raw, mask)
     if np.random.rand() < 0.4:
         out = rotated_rect_occlusion(out)

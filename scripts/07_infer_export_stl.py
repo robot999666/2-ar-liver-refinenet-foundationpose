@@ -1,11 +1,11 @@
-"""Iterative rigid pose inference and STL export for one frame.
+"""对一帧数据执行迭代刚性位姿推理并导出 STL。
 
-The default profile follows the current validated policy:
-- use the manually annotated full liver mask as the network mask;
-- use depth masked by the manually annotated depth-valid mask;
-- keep contour/mask scores as diagnostics only;
-- stop after an accepted update when the predicted translation residual is < 1 mm;
-- select the last safe accepted pose without using evaluation ground truth.
+默认 profile 遵循当前已验证策略：
+- 使用人工标注的完整肝脏掩码作为网络 mask；
+- 使用经人工 depth-valid mask 处理的深度；
+- 轮廓和 mask 分数仅用于诊断；
+- 接受一次更新后，当预测平移残差 < 1 mm 时停止；
+- 不使用评估真值，选择最后一个安全接受的位姿。
 """
 
 import csv
@@ -35,17 +35,16 @@ from shared.intraop_masks import (
 
 
 class Config:
-    """Script-07 inference settings.
+    """Script 07 推理配置。
 
-    The default policy reads no TRE/IC ground truth, keeps image-space proxy
-    scores diagnostic-only, selects the last safe accepted pose, and treats
-    missing or stale real-frame masks/depth as hard errors.
+    默认策略不读取 TRE/IC 真值；图像空间 proxy 分数仅用于诊断；最终选择
+    最后一个安全接受的位姿；缺失或过期的真实帧掩码/深度会直接报错。
 
-    Proxy-based acceptance, stopping, or selection requires the explicit
-    AR_ALLOW_UNVALIDATED_SCORE_CONTROL=1 ablation switch.
+    若要使用 proxy 控制接受、停止或选择，必须显式开启消融开关
+    AR_ALLOW_UNVALIDATED_SCORE_CONTROL=1。
     """
 
-    # Case, shared input contract, and checkpoint. TRANS_SCALE must match 06.
+    # 病例、共享输入契约和 checkpoint；TRANS_SCALE 必须与 script 06 一致。
     INFER_PROFILE = os.environ.get("AR_INFER_PROFILE", "paper_translation_stop1mm_last")
     PATIENT_ID = case_config.PATIENT_ID
     FRAME_ID = case_config.FRAME_ID
@@ -54,12 +53,12 @@ class Config:
     IMG_SIZE = case_config.IMG_SIZE
     TRANS_SCALE = 50.0
 
-    # Iteration budget and model-residual convergence threshold.
+    # 迭代预算和模型残差收敛阈值。
     MAX_ITER = int(os.environ.get("AR_MAX_ITER", "10"))
     STOP_TRANS_MM = float(os.environ.get("AR_STOP_TRANS_MM", "1.0"))
 
-    # First applied step = base damping * FIRST_STEP_DAMPING. Later steps use
-    # REFINE_* directly. damp_offset() clips factors to [0, 1].
+    # 第一次实际更新系数 = 基础 damping * FIRST_STEP_DAMPING。
+    # 后续步骤直接使用 REFINE_*；damp_offset() 会将系数截断到 [0, 1]。
     TRANS_DAMPING = float(os.environ.get("AR_TRANS_DAMPING", "0.4"))
     ROT_DAMPING = float(os.environ.get("AR_ROT_DAMPING", "0.4"))
     FIRST_STEP_DAMPING = float(os.environ.get("AR_FIRST_STEP_DAMPING", "0.75"))
@@ -68,13 +67,13 @@ class Config:
     MAX_STEP_TRANS_MM = float(os.environ.get("AR_MAX_STEP_TRANS_MM", "0.0"))
     MAX_STEP_ROT_DEG = float(os.environ.get("AR_MAX_STEP_ROT_DEG", "0.0"))
 
-    # Hard divergence guards. STOP_DRIFT_MM=0 disables only that optional guard.
+    # 硬性发散保护；STOP_DRIFT_MM=0 只关闭该可选保护。
     DIVERGE_RAW_TRANS_MM = float(os.environ.get("AR_DIVERGE_RAW_TRANS_MM", "120.0"))
     DIVERGE_RAW_ROT_DEG = float(os.environ.get("AR_DIVERGE_RAW_ROT_DEG", "45.0"))
     DIVERGE_POSE_TRANS_MM = float(os.environ.get("AR_DIVERGE_POSE_TRANS_MM", "200.0"))
     STOP_DRIFT_MM = float(os.environ.get("AR_STOP_DRIFT_MM", "0.0"))
 
-    # Unvalidated proxy controls. Defaults keep every proxy diagnostic-only.
+    # 未验证的 proxy 控制项；默认所有 proxy 都只用于诊断。
     RAW_SCORE_ROT_WEIGHT = float(os.environ.get("AR_RAW_SCORE_ROT_WEIGHT", "5.0"))
     RAW_WORSEN_PATIENCE = int(os.environ.get("AR_RAW_WORSEN_PATIENCE", "0"))
     RAW_WORSEN_MIN_DELTA = float(os.environ.get("AR_RAW_WORSEN_MIN_DELTA", "0.5"))
@@ -86,11 +85,11 @@ class Config:
         "AR_ALLOW_UNVALIDATED_SCORE_CONTROL", "0"
     ).lower() in ("1", "true", "yes")
 
-    # Image-space diagnostics; these are not validated TRE/IC surrogates.
+    # 图像空间诊断指标；它们不是经过验证的 TRE/IC 替代指标。
     CONTOUR_SCORE_MAX_DIST_PX = float(os.environ.get("AR_CONTOUR_SCORE_MAX_DIST_PX", "50.0"))
     CONTOUR_SCORE_MASK_WEIGHT = float(os.environ.get("AR_CONTOUR_SCORE_MASK_WEIGHT", "20.0"))
 
-    # Pose composition convention and explicit missing-depth ablation switch.
+    # 位姿组合约定，以及显式的缺失深度消融开关。
     UPDATE_MODE = os.environ.get("AR_UPDATE_MODE", "right")
     ALLOW_ZERO_DEPTH = os.environ.get("AR_ALLOW_ZERO_DEPTH", "0").lower() in ("1", "true", "yes")
 
@@ -121,7 +120,7 @@ def setup_logger(log_path, name="InferExportSTL"):
 
 
 def validate_inference_control_config(cfg):
-    """Prevent unvalidated image proxies from silently controlling inference."""
+    """防止未验证的图像 proxy 在未明确允许时控制推理。"""
     unsafe = []
     if getattr(cfg, "SELECT_BEST_BY", "last") != "last":
         unsafe.append("AR_SELECT_BEST_BY must be 'last'")
@@ -243,7 +242,7 @@ def _read_json(path):
 
 
 def load_real_B(case_dir, image_shape, intraop_depth_path, allow_zero_depth=False, logger=None, return_observation=False):
-    """Load and validate the real-frame network input before heavy model setup."""
+    """在加载大型模型前，读取并验证真实帧网络输入。"""
     height, width = image_shape
     contour_path = os.path.join(case_dir, "contours", "gt_multicontour.npy")
     if not os.path.exists(contour_path):

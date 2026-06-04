@@ -1,6 +1,6 @@
-# Online Docker environment: Ubuntu 22.04, system Python 3.10, CUDA 11.8.
-# archives/wheelhouse.zip is a separate Linux/Python 3.12 cloud bundle and is
-# intentionally not used by this image.
+# 在线 Docker 环境：Ubuntu 22.04、系统 Python 3.10、CUDA 11.8。
+# archives/wheelhouse.zip 是独立的 Linux/Python 3.12 云端依赖包，
+# 本镜像不会使用它。
 FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive

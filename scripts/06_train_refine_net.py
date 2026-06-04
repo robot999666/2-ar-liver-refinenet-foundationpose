@@ -1,8 +1,7 @@
-"""Train the rigid RefineNet pose-offset model from explicit script-03 pairs.
+"""使用 script 03 生成的显式配对训练刚性 RefineNet 位姿偏移模型。
 
-The dataset reads rendered contours, masks, and raw DA2 depth from scripts 03
-and 04. Train/validation/inference share deterministic depth normalization;
-only the training branch applies stochastic augmentation.
+数据集读取 scripts 03 和 04 生成的渲染轮廓、掩码和 DA2 原始深度。
+train/validation/inference 共用确定性深度归一化；只有训练分支应用随机增强。
 """
 
 import os
@@ -46,23 +45,23 @@ from shared.depth_augment import augment_depth, depth_for_network_eval
 
 
 class Config:
-    """Script-06 training settings.
+    """Script 06 训练配置。
 
-    Shared path/input-contract values come from case_config. Training starts
-    fresh unless AR_RESUME=1 is explicitly set. Important checkpoint
-    compatibility fields are saved in best_full.pth and last.pth.
+    公共路径和输入契约参数来自 case_config。除非显式设置 AR_RESUME=1，
+    否则训练从头开始。重要的 checkpoint 兼容性字段会保存到
+    best_full.pth 和 last.pth。
     """
 
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
     CASE_ROOT = _cc.CASE_ROOT
 
-    # Persistent training outputs under result/<patient_id>/<frame_id>.
+    # 持久训练输出统一保存到 result/<patient_id>/<frame_id>。
     LOG_DIR = _cc.logs_dir()
     CHECKPOINT_DIR = _cc.checkpoints_dir()
     TRAINING_DIR = _cc.training_dir()
 
-    # Runtime and optimization controls.
+    # 运行和优化参数。
     BATCH_SIZE = int(os.environ.get("AR_BATCH_SIZE", "32"))
     ACCUMULATION_STEPS = 1
     LR = 1e-4
@@ -71,13 +70,13 @@ class Config:
     SEED = _cc.SEED
     RESUME = os.environ.get("AR_RESUME", "0").lower() in ("1", "true", "yes")
 
-    # Model/output conventions. TRANS_SCALE must match script 07.
+    # 模型和输出约定；TRANS_SCALE 必须与 script 07 一致。
     ROT_REP = "6d"
     TRANS_SCALE = 50.0
     NUM_SAMPLED_PTS = 2000
     IMG_SIZE = _cc.IMG_SIZE
 
-    # Train-only contour/mask augmentation settings.
+    # 仅用于训练的轮廓和掩码增强参数。
     CONTOUR_ELASTIC_ALPHA = 10
     CONTOUR_ELASTIC_SIGMA = 4
     MASK_AUG_PROB = 0.5

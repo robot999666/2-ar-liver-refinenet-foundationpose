@@ -1,7 +1,7 @@
-"""Render deterministic explicit A/B pairs for rigid offset training.
+"""为刚性偏移训练渲染可复现的显式 A/B 配对。
 
-base_to_target pairs teach coarse correction from the initial pose.
-local_refine pairs teach small correction near a sampled target pose.
+base_to_target 配对用于学习从初始位姿开始的粗修正。
+local_refine 配对用于学习采样目标位姿附近的小范围修正。
 """
 
 import json
@@ -22,38 +22,37 @@ from shared.pose_render import PoseSampleRenderer, euler_to_matrix
 
 
 class Config:
-    """Script-03 sampling settings.
+    """Script 03 采样配置。
 
-    Translation ranges are millimetres and rotation ranges are degrees.
-    Changing these values changes the training distribution and must be
-    recorded with the resulting checkpoint.
+    平移范围单位为 mm，旋转范围单位为 degree。修改这些参数会改变训练
+    数据分布，必须与生成的 checkpoint 一同记录。
     """
 
     PATIENT_ID = case_config.PATIENT_ID
     FRAME_ID = case_config.FRAME_ID
     CASE_ROOT = case_config.CASE_ROOT
 
-    # Total explicit pairs and deterministic non-empty train/validation split.
+    # 显式配对总数，以及可复现且保证非空的 train/validation 划分。
     NUM_PAIRS = int(os.environ.get("AR_NUM_SAMPLES", "5000"))
     TRAIN_RATIO = float(os.environ.get("AR_TRAIN_RATIO", "0.9"))
     SEED = case_config.SEED
 
-    # Broad target-pose distribution shared by both pair types.
+    # 两类配对共同使用的宽范围目标位姿分布。
     GLOBAL_TRANS_RANGE_MM = float(os.environ.get("AR_TRANS_RANGE_MM", "50.0"))
     GLOBAL_ROT_RANGE_DEG = float(os.environ.get("AR_ROT_RANGE_DEG", "20.0"))
 
-    # Small A-to-B perturbation used only by local_refine pairs.
+    # 仅用于 local_refine 配对的 A 到 B 小范围扰动。
     LOCAL_TRANS_RANGE_MM = float(os.environ.get("AR_LOCAL_TRANS_RANGE_MM", "5.0"))
     LOCAL_ROT_RANGE_DEG = float(os.environ.get("AR_LOCAL_ROT_RANGE_DEG", "3.0"))
     LOCAL_REFINE_RATIO = float(os.environ.get("AR_LOCAL_REFINE_RATIO", "0.7"))
 
-    # Reject unusable renders before saving a pair.
+    # 保存配对前拒绝不可用的渲染结果。
     MIN_VISIBLE_TYPES = 2
     MIN_MASK_RATIO = 0.02
     MAX_MASK_RATIO = 0.95
     RENDER_CONTOUR_THICKNESS = case_config.CONTOUR_THICKNESS
 
-    # 0 resolves to NUM_PAIRS * 50 attempts; failure is reported explicitly.
+    # 设为 0 时使用 NUM_PAIRS * 50 次尝试上限；失败会明确报错。
     MAX_ATTEMPTS = int(os.environ.get("AR_MAX_ATTEMPTS", "0"))
 
 

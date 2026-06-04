@@ -1,9 +1,8 @@
-"""Batch preprocessing, inference, and post-hoc Python TRE/IC evaluation.
+"""批量执行预处理、推理和事后 Python TRE/IC 评估。
 
-Every selected frame uses the canonical result/<patient_id>/<frame_id> layout.
-Evaluation runs only after script 07 chooses its final pose, so TRE/IC cannot
-influence inference selection. Script 01b remains an intentional manual step;
-frames without a validated mask bundle stop during mask preflight.
+所有选中帧统一使用 result/<patient_id>/<frame_id> 目录结构。评估仅在
+script 07 选定最终位姿后执行，因此 TRE/IC 不会影响推理选择。script 01b
+仍是有意保留的人工步骤；缺少已验证掩码包的帧会在掩码预检查阶段停止。
 """
 
 import argparse
@@ -321,14 +320,18 @@ def process_frame(args, frame):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Batch run scripts 01/02/05/07 and Python TRE/IC evaluation."
+        description="批量运行 scripts 01/02/05/07，并执行 Python TRE/IC 评估。"
     )
-    parser.add_argument("--patient-id", default="Patient1")
-    parser.add_argument("--frames", default="02-10")
-    parser.add_argument("--weight", default=case_config.refinenet_weight_path())
-    parser.add_argument("--skip-existing-depth", action="store_true")
-    parser.add_argument("--skip-existing-case", action="store_true")
-    parser.add_argument("--skip-existing-infer", action="store_true")
+    parser.add_argument("--patient-id", default="Patient1", help="病例标识，例如 Patient1")
+    parser.add_argument("--frames", default="02-10", help="帧范围，例如 02-10 或 02,03,06")
+    parser.add_argument(
+        "--weight",
+        default=case_config.refinenet_weight_path(),
+        help="用于推理的 RefineNet checkpoint 路径",
+    )
+    parser.add_argument("--skip-existing-depth", action="store_true", help="复用已有真实帧深度")
+    parser.add_argument("--skip-existing-case", action="store_true", help="复用已有预处理病例数据")
+    parser.add_argument("--skip-existing-infer", action="store_true", help="复用已有推理结果")
     args = parser.parse_args()
 
     frames = parse_frames(args.frames)

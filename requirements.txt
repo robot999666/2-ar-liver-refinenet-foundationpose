@@ -1,5 +1,5 @@
-# Runtime dependencies for scripts 01-08.
-# Install CUDA-enabled PyTorch separately or use the Dockerfile.
+# Scripts 01-08 的运行依赖。
+# 请单独安装支持 CUDA 的 PyTorch，或直接使用 Dockerfile。
 
 numpy==1.26.4
 scipy==1.15.3
