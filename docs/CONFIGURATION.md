@@ -53,6 +53,21 @@
 
 最终参数和来源写入 `T_view_meta.json`。
 
+## Script 08 批处理
+
+| CLI 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `--patient-id` | `Patient1` | 要处理的患者 |
+| `--frames` | `all` | 自动发现全部 Lap PNG；也可传 `02-10` 或 `02,03,06` |
+| `--stage` | `run` | `prepare`、`annotate`、`run` 或 `all` |
+| `--initial-pose-frame` | 所选第一帧 | 只在该参考帧运行 script 02，并将 `T_view` 共享给其余帧 |
+| `--initial-pose-config` | 未设置 | 参考帧初始位姿 JSON；通过 `AR_TVIEW_CONFIG` 传给 script 02 |
+| `--weight` | 标准权重解析结果 | 全部帧共用的 RefineNet checkpoint |
+| `--force-mask` | 关闭 | 重新标注并覆盖已有人工 mask |
+
+`--stage all` 会依次执行批量预处理、逐帧交互式 mask 标注、深度、推理和评估。
+它仍要求人工完成 mask 标注，不会用轮廓自动填充代替人工掩码。
+
 ## 训练配对生成
 
 | 参数 | 默认值 | 说明 |

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import shutil
 import sys
@@ -59,6 +60,38 @@ class BatchMaskPreflightTests(unittest.TestCase):
 
     def test_parse_frames(self):
         self.assertEqual(BATCH.parse_frames("2-4,06"), ["02", "03", "04", "06"])
+
+    def test_parse_all_discovers_numeric_png_frames(self):
+        with temporary_case() as data_root:
+            lap_dir = os.path.join(data_root, "Dataset", "Patient3", "Lap Images")
+            os.makedirs(lap_dir)
+            for name in ("10.png", "02.png", "notes.txt", "03.jpg"):
+                with open(os.path.join(lap_dir, name), "wb") as file:
+                    file.write(b"")
+            self.assertEqual(
+                BATCH.parse_frames("all", data_root, "Patient3"),
+                ["02", "10"],
+            )
+
+    def test_copy_shared_initial_pose_records_reference(self):
+        with temporary_case() as case_root:
+            source_dir = os.path.join(case_root, "Patient3", "02")
+            target_dir = os.path.join(case_root, "Patient3", "03")
+            os.makedirs(source_dir)
+            os.makedirs(target_dir)
+            pose = np.eye(4, dtype=np.float32)
+            np.savetxt(os.path.join(source_dir, "T_view.txt"), pose)
+            with open(os.path.join(source_dir, "T_view_meta.json"), "w", encoding="utf-8") as file:
+                json.dump({"params": {"TX": 1.0}}, file)
+
+            BATCH.copy_shared_initial_pose("Patient3", "02", "03", case_root=case_root)
+
+            copied = np.loadtxt(os.path.join(target_dir, "T_view.txt"))
+            self.assertTrue(np.allclose(copied, pose))
+            with open(os.path.join(target_dir, "T_view_meta.json"), "r", encoding="utf-8") as file:
+                metadata = json.load(file)
+            self.assertEqual(metadata["frame_id"], "03")
+            self.assertEqual(metadata["shared_initial_pose"]["source_frame_id"], "02")
 
 
 if __name__ == "__main__":

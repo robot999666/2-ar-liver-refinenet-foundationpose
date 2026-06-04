@@ -4,6 +4,8 @@ __pycache__/
 .idea/
 .vscode/
 tests/_runtime/
+.batch_runtime/
+.restore_stage/
 
 # 生成的病例数据和结果可以重建，因此有意排除。
 data_case/*

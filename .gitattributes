@@ -12,3 +12,8 @@
 *.ply binary
 *.stl binary
 *.obj text eol=lf
+*.pdf binary
+
+# 官方源数据按下载内容保存，不由 Git 自动转换文本换行。
+src_data/Dataset/** -text
+src_data/contours_and_models/** -text

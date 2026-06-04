@@ -19,8 +19,9 @@ TRE/IC 事后评估的完整流程。项目不包含非刚性配准，也不允�
 - 真实帧掩码必须人工标注并通过质量校验，不再从可能未闭合的轮廓线自动填充。
 - 当前代码由 Git 管理。整理前版本与旧结果仍可从 Git 历史恢复。
 - 项目中的文件夹名均为英文；`<patient_id>`、`<frame_id>` 是路径占位符，不是中文目录名。
-- 当前 Patient1 完整源输入包含 `02`、`03`、`04`、`06` 至 `10`；源数据不含 `05`。
-- 干净仓库不附带 `data_case/` 人工掩码；首次严格流程必须逐帧运行交互式 `01b`，否则 `05/07/08` 会安全失败。
+- 已恢复官方 Patient1-4 原始数据；各患者完整帧见 `src_data/SOURCES.md`。
+- 干净仓库不附带 `data_case/` 人工掩码；首次严格流程必须人工完成 `01b`，
+  但 script 08 可以用一个命令依次打开全部帧，不需要逐帧输入命令。
 
 ## 项目目录
 
@@ -58,9 +59,10 @@ AR/
 | `05_depth_anything_intraop.py` | 为真实帧生成经掩码审计的 DA2 深度 | 人工掩码、真实图像 | `data_case/.../depth/` |
 | `06_train_refine_net.py` | 训练刚性位姿偏移网络 | 03/04 样本 | `result/.../checkpoints/` |
 | `07_infer_export_stl.py` | 多轮刚性推理并导出 STL | prepared case、05 深度、RefineNet 权重 | `result/.../inference/` |
-| `08_batch_patient_frames.py` | 批处理 01/02/05/07 并做 Python TRE/IC 评估 | 多帧源数据、已标注掩码 | 每帧结果与 batch 汇总 |
+| `08_batch_patient_frames.py` | 批量预处理、共享首帧位姿、依次标注、推理并做 Python TRE/IC 评估 | 多帧源数据、RefineNet 权重 | 每帧结果与 batch 汇总 |
 
-`08` 不会自动执行交互式 `01b`，也不会自动训练模型。批处理前必须为每个目标帧准备并检查人工掩码。
+`08 --stage annotate/all` 会依次执行交互式 `01b`，但不会自动训练模型。
+人工 mask 不能安全地由未闭合轮廓自动生成。
 
 ## 路径与输出约定
 
@@ -212,21 +214,127 @@ python scripts/08_batch_patient_frames.py \
 
 ## 多帧批处理
 
-先逐帧运行 `01` 和 `01b` 完成人工掩码，再运行：
+### 脚本顺序
+
+使用已有 RefineNet 权重对一个患者的全部帧推理时，实际顺序为：
+
+```text
+08 prepare:
+  01(全部帧) -> 02(参考帧一次) -> 将参考帧 T_view 复制给其余帧
+08 annotate:
+  01b(依次打开全部帧，人工标注)
+08 run:
+  05(全部帧) -> 07(全部帧) -> Python TRE/IC 评估与汇总
+```
+
+Scripts 03、04、06 只在重新生成训练数据和训练 RefineNet 时运行，不属于使用
+已有权重批量推理 Patient3 的步骤。
+
+### Patient3 全部帧
+
+Patient3 的 `--frames all` 会自动发现 `02-10`，默认首帧就是 `02`。推荐分三阶段，
+便于本机标注后再上传云端推理：
 
 ```bash
+# 1. 首次批量预处理；只在 02 上建立兜底初始位姿，然后共享给 03-10
 python scripts/08_batch_patient_frames.py \
-  --patient-id Patient1 \
-  --frames 02-10 \
+  --patient-id Patient3 \
+  --frames all \
+  --stage prepare \
+  --initial-pose-frame 02
+
+# 2. 一个命令依次打开 Patient3 全部帧的人工 mask 标注窗口
+python scripts/08_batch_patient_frames.py \
+  --patient-id Patient3 \
+  --frames all \
+  --stage annotate
+
+# 3. 批量生成深度、推理，并评估每帧和平均结果
+python scripts/08_batch_patient_frames.py \
+  --patient-id Patient3 \
+  --frames all \
+  --stage run \
   --weight weights/refinenet_patient1_02_best.pth
 ```
 
-当源数据、掩码、深度或推理结果已存在时，可使用：
+首次 `prepare` 后必须检查
+`result/Patient3/02/preprocess/Patient3_02_tview_debug.png`。如果兜底位姿不合适，
+在 `data_case/Patient3/02/initial_pose.json` 中保存调整后的 02 帧初始位姿，再重新
+运行 `--stage prepare`。JSON 格式如下；数值必须根据轮廓叠加调试图人工调整，
+不能直接把示例值当作真值：
+
+```json
+{
+  "TX": 6.0,
+  "TY": 27.0,
+  "TZ": 110.0,
+  "RX": 45.0,
+  "RY": -10.0,
+  "RZ": 50.0
+}
+```
+
+重新运行时，script 02 会自动读取参考帧目录中的 `initial_pose.json`，无需逐帧设置：
 
 ```bash
+python scripts/08_batch_patient_frames.py \
+  --patient-id Patient3 \
+  --frames all \
+  --stage prepare \
+  --initial-pose-frame 02
+```
+
+也可以用 `--initial-pose-config <path>` 指定病例配置。未提供配置或
+`AR_TVIEW_*` 时，script 08 会明确警告并使用 script 02 的 fallback。
+
+如果同一环境同时具备 GUI、DA2 权重、PyTorch/GPU 和 RefineNet 权重，可以使用
+一个命令依次完成所有阶段：
+
+```bash
+python scripts/08_batch_patient_frames.py \
+  --patient-id Patient3 \
+  --frames all \
+  --stage all \
+  --initial-pose-frame 02 \
+  --initial-pose-config data_case/Patient3/02/initial_pose.json \
+  --weight weights/refinenet_patient1_02_best.pth
+```
+
+注意：`--stage all` 仍会等待你逐帧完成人工 mask 标注，只是不需要逐帧重新输入
+命令。初始位姿是参考帧 02 的 `T_view`，不是 02 的推理最终位姿，也不使用 TRE/IC
+真值。
+
+Script 08 会在批量任务开始前检查当前阶段所需的 `open3d`、`torch`、`scipy`
+等依赖，缺失时一次性报错，不会让每帧重复失败。
+
+复用已有中间结果时可添加：
+
+```text
 --skip-existing-case
 --skip-existing-depth
 --skip-existing-infer
+```
+
+仅重新评估已有推理结果：
+
+```bash
+python scripts/08_batch_patient_frames.py \
+  --patient-id Patient3 \
+  --frames all \
+  --stage run \
+  --skip-existing-depth \
+  --skip-existing-infer
+```
+
+汇总结果保存到：
+
+```text
+result/Patient3/batch_02_10/
+├─ batch_config.json
+├─ summary.csv
+├─ debug_all_frames.csv
+├─ incomplete_frames.csv
+└─ average.json
 ```
 
 ## Docker

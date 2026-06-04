@@ -1,0 +1,54 @@
+{
+    "description": "",
+    "tags": [],
+    "size": {
+        "height": 574,
+        "width": 760
+    },
+    "objects": [
+        {
+            "id": 731166355,
+            "classId": 2925752,
+            "description": "",
+            "geometryType": "polygon",
+            "labelerLogin": "mathieuribeiro",
+            "createdAt": "2021-05-14T05:51:39.225Z",
+            "updatedAt": "2021-05-14T05:51:42.810Z",
+            "tags": [],
+            "classTitle": "Tumor",
+            "points": {
+                "exterior": [
+                    [
+                        477,
+                        266
+                    ],
+                    [
+                        474,
+                        262
+                    ],
+                    [
+                        480,
+                        261
+                    ],
+                    [
+                        487,
+                        261
+                    ],
+                    [
+                        491,
+                        264
+                    ],
+                    [
+                        487,
+                        267
+                    ],
+                    [
+                        482,
+                        268
+                    ]
+                ],
+                "interior": []
+            }
+        }
+    ]
+}

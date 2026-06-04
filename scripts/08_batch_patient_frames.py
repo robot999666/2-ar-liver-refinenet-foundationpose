@@ -7,8 +7,10 @@ script 07 选定最终位姿后执行，因此 TRE/IC 不会影响推理选择�
 
 import argparse
 import csv
+import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -25,11 +27,49 @@ def ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
 
+def require_python_modules(stage, skip_existing_depth=False, skip_existing_infer=False):
+    """在批量任务开始前检查阶段所需依赖，避免每帧重复失败。"""
+    required = {"cv2", "numpy"}
+    if stage in ("prepare", "all"):
+        required.add("open3d")
+    if stage in ("run", "all"):
+        required.update({"open3d", "scipy"})
+        if not skip_existing_depth or not skip_existing_infer:
+            required.add("torch")
+    missing = sorted(name for name in required if importlib.util.find_spec(name) is None)
+    if missing:
+        raise ModuleNotFoundError(
+            f"Stage '{stage}' is missing Python modules: {', '.join(missing)}. "
+            "Install requirements.txt or use the documented Docker/cloud environment."
+        )
+
+
 def frame_id(number):
     return f"{int(number):02d}"
 
 
-def parse_frames(text):
+def discover_frames(data_root, patient_id):
+    """根据 Lap Images 自动发现患者的全部数字帧。"""
+    lap_dir = os.path.join(data_root, "Dataset", patient_id, "Lap Images")
+    if not os.path.isdir(lap_dir):
+        raise FileNotFoundError(f"Lap Images directory does not exist: {lap_dir}")
+    frames = []
+    for name in os.listdir(lap_dir):
+        stem, extension = os.path.splitext(name)
+        if extension.lower() == ".png" and stem.isdigit():
+            frames.append(frame_id(stem))
+    frames = sorted(set(frames), key=int)
+    if not frames:
+        raise ValueError(f"No numeric PNG frames found in: {lap_dir}")
+    return frames
+
+
+def parse_frames(text, data_root=None, patient_id=None):
+    if text.strip().lower() == "all":
+        if data_root is None or patient_id is None:
+            raise ValueError("parse_frames('all') requires data_root and patient_id.")
+        return discover_frames(data_root, patient_id)
+
     frames = []
     for chunk in text.split(","):
         chunk = chunk.strip()
@@ -108,6 +148,18 @@ def run_step(script_name, env, log_path):
             text=True,
             check=False,
         )
+    return process.returncode
+
+
+def run_interactive_step(script_name, env, extra_args=None):
+    command = [sys.executable, os.path.join(PROJECT_ROOT, "scripts", script_name)]
+    command.extend(extra_args or [])
+    process = subprocess.run(
+        command,
+        cwd=PROJECT_ROOT,
+        env=env,
+        check=False,
+    )
     return process.returncode
 
 
@@ -248,7 +300,151 @@ def make_environment(patient_id, frame, weight):
     return env
 
 
-def process_frame(args, frame):
+def copy_shared_initial_pose(
+    patient_id,
+    source_frame,
+    target_frame,
+    case_root=None,
+    result_root=None,
+):
+    """将参考帧的初始位姿复制到目标帧，并记录来源。"""
+    source = frame_paths(patient_id, source_frame, case_root, result_root)
+    target = frame_paths(patient_id, target_frame, case_root, result_root)
+    if not os.path.exists(source["initial_pose"]):
+        raise FileNotFoundError(f"Reference initial pose does not exist: {source['initial_pose']}")
+    ensure_dir(target["case"])
+    shutil.copy2(source["initial_pose"], target["initial_pose"])
+
+    source_meta_path = os.path.join(source["case"], "T_view_meta.json")
+    target_meta_path = os.path.join(target["case"], "T_view_meta.json")
+    source_meta = {}
+    if os.path.exists(source_meta_path):
+        with open(source_meta_path, "r", encoding="utf-8") as file:
+            source_meta = json.load(file)
+    source_meta["patient_id"] = patient_id
+    source_meta["frame_id"] = target_frame
+    source_meta["shared_initial_pose"] = {
+        "source_patient_id": patient_id,
+        "source_frame_id": source_frame,
+        "source_pose_path": source["initial_pose"],
+    }
+    with open(target_meta_path, "w", encoding="utf-8") as file:
+        json.dump(source_meta, file, indent=2)
+
+
+def prepare_frames(args, frames, initial_pose_frame):
+    """批量运行 script 01，并将参考帧的 script 02 位姿共享给全部帧。"""
+    rows = []
+    prepared = []
+    for frame in frames:
+        paths = frame_paths(args.patient_id, frame)
+        ensure_dir(paths["logs"])
+        missing = missing_source_inputs(case_config.DATA_ROOT, args.patient_id, frame)
+        if missing:
+            rows.append(
+                {
+                    "frame": frame,
+                    "status": "skipped_missing_source",
+                    "missing": "; ".join(f"{name}={path}" for name, path in missing.items()),
+                }
+            )
+            continue
+        env = make_environment(args.patient_id, frame, args.weight)
+        if not args.skip_existing_case or not os.path.exists(paths["lap_image"]):
+            return_code = run_step(
+                "01_prepare_case.py",
+                env,
+                os.path.join(paths["logs"], "01_prepare_case.log"),
+            )
+            if return_code:
+                rows.append({"frame": frame, "status": "failed_01", "returncode": return_code})
+                continue
+        prepared.append(frame)
+
+    if initial_pose_frame not in prepared:
+        reference_failure = next(
+            (row for row in rows if row.get("frame") == initial_pose_frame),
+            None,
+        )
+        raise ValueError(
+            f"Initial-pose reference frame {initial_pose_frame} was not prepared successfully: "
+            f"{reference_failure}"
+        )
+    reference_paths = frame_paths(args.patient_id, initial_pose_frame)
+    reference_env = make_environment(args.patient_id, initial_pose_frame, args.weight)
+    if args.initial_pose_config:
+        config_path = args.initial_pose_config
+        if not os.path.isabs(config_path):
+            config_path = os.path.join(PROJECT_ROOT, config_path)
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Initial-pose config does not exist: {config_path}")
+        reference_env["AR_TVIEW_CONFIG"] = config_path
+    elif not any(
+        name in os.environ
+        for name in ("AR_TVIEW_TX", "AR_TVIEW_TY", "AR_TVIEW_TZ", "AR_TVIEW_RX", "AR_TVIEW_RY", "AR_TVIEW_RZ")
+    ):
+        print(
+            "[WARN] No --initial-pose-config or AR_TVIEW_* override was provided. "
+            "Script 02 will use its fallback pose; inspect the reference-frame debug image."
+        )
+    if not args.skip_existing_case or not os.path.exists(reference_paths["initial_pose"]):
+        return_code = run_step(
+            "02_setup_initial_pose.py",
+            reference_env,
+            os.path.join(reference_paths["logs"], "02_setup_initial_pose.log"),
+        )
+        if return_code:
+            raise RuntimeError(
+                f"Script 02 failed for initial-pose reference frame {initial_pose_frame}."
+            )
+
+    for frame in prepared:
+        if frame != initial_pose_frame:
+            copy_shared_initial_pose(args.patient_id, initial_pose_frame, frame)
+        rows.append(
+            {
+                "frame": frame,
+                "status": "prepared",
+                "initial_pose_frame": initial_pose_frame,
+            }
+        )
+    return rows
+
+
+def annotate_frames(args, frames):
+    """按帧依次打开人工 mask 标注窗口；已有有效标注默认跳过。"""
+    rows = []
+    for frame in frames:
+        paths = frame_paths(args.patient_id, frame)
+        ensure_dir(paths["logs"])
+        if not os.path.exists(paths["lap_image"]):
+            rows.append({"frame": frame, "status": "needs_prepare"})
+            continue
+        if not args.force_mask:
+            try:
+                _, summary = preflight_case_masks(paths["case"], paths["lap_image"])
+                write_text(os.path.join(paths["logs"], "mask_preflight.log"), f"[OK] {summary}\n")
+                rows.append({"frame": frame, "status": "mask_exists"})
+                continue
+            except Exception:
+                pass
+        env = make_environment(args.patient_id, frame, args.weight)
+        return_code = run_interactive_step(
+            "01b_annotate_intraop_masks.py",
+            env,
+            ["--force"] if args.force_mask else None,
+        )
+        rows.append(
+            {
+                "frame": frame,
+                "status": "mask_saved" if return_code == 0 else "failed_01b",
+                "returncode": return_code,
+            }
+        )
+    return rows
+
+
+def run_frame(args, frame):
     paths = frame_paths(args.patient_id, frame)
     for name in ("logs", "evaluation", "mask_qa"):
         ensure_dir(paths[name])
@@ -262,23 +458,15 @@ def process_frame(args, frame):
         }, []
 
     env = make_environment(args.patient_id, frame, args.weight)
-    if not args.skip_existing_case or not os.path.exists(paths["lap_image"]):
-        return_code = run_step(
-            "01_prepare_case.py",
-            env,
-            os.path.join(paths["logs"], "01_prepare_case.log"),
-        )
-        if return_code:
-            return {"frame": frame, "status": "failed_01", "returncode": return_code}, []
-
-    if not os.path.exists(paths["initial_pose"]):
-        return_code = run_step(
-            "02_setup_initial_pose.py",
-            env,
-            os.path.join(paths["logs"], "02_setup_initial_pose.log"),
-        )
-        if return_code:
-            return {"frame": frame, "status": "failed_02", "returncode": return_code}, []
+    missing_prepared = [
+        path for path in (paths["lap_image"], paths["initial_pose"]) if not os.path.exists(path)
+    ]
+    if missing_prepared:
+        return {
+            "frame": frame,
+            "status": "needs_prepare",
+            "missing": "; ".join(missing_prepared),
+        }, []
 
     try:
         quality, summary = preflight_case_masks(paths["case"], paths["lap_image"])
@@ -320,10 +508,28 @@ def process_frame(args, frame):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="批量运行 scripts 01/02/05/07，并执行 Python TRE/IC 评估。"
+        description="按阶段批量预处理、标注、推理并执行 Python TRE/IC 评估。"
     )
     parser.add_argument("--patient-id", default="Patient1", help="病例标识，例如 Patient1")
-    parser.add_argument("--frames", default="02-10", help="帧范围，例如 02-10 或 02,03,06")
+    parser.add_argument(
+        "--frames",
+        default="all",
+        help="帧范围，例如 all、02-10 或 02,03,06",
+    )
+    parser.add_argument(
+        "--stage",
+        choices=("prepare", "annotate", "run", "all"),
+        default="run",
+        help="prepare=批量预处理；annotate=依次标注；run=深度/推理/评估；all=依次执行全部阶段",
+    )
+    parser.add_argument(
+        "--initial-pose-frame",
+        help="共享初始位姿的参考帧；默认使用所选帧中的第一帧",
+    )
+    parser.add_argument(
+        "--initial-pose-config",
+        help="参考帧初始位姿 JSON；未指定时使用 AR_TVIEW_* 或 script 02 fallback",
+    )
     parser.add_argument(
         "--weight",
         default=case_config.refinenet_weight_path(),
@@ -332,10 +538,21 @@ def main():
     parser.add_argument("--skip-existing-depth", action="store_true", help="复用已有真实帧深度")
     parser.add_argument("--skip-existing-case", action="store_true", help="复用已有预处理病例数据")
     parser.add_argument("--skip-existing-infer", action="store_true", help="复用已有推理结果")
+    parser.add_argument("--force-mask", action="store_true", help="重新标注并覆盖已有人工 mask")
     args = parser.parse_args()
 
-    frames = parse_frames(args.frames)
-    if not os.path.exists(args.weight):
+    frames = parse_frames(args.frames, case_config.DATA_ROOT, args.patient_id)
+    require_python_modules(
+        args.stage,
+        skip_existing_depth=args.skip_existing_depth,
+        skip_existing_infer=args.skip_existing_infer,
+    )
+    initial_pose_frame = frame_id(args.initial_pose_frame) if args.initial_pose_frame else frames[0]
+    if initial_pose_frame not in frames:
+        raise ValueError(
+            f"Initial-pose reference frame {initial_pose_frame} is not in selected frames: {frames}"
+        )
+    if args.stage in ("run", "all") and not args.skip_existing_infer and not os.path.exists(args.weight):
         raise FileNotFoundError(f"RefineNet weight does not exist: {args.weight}")
 
     batch_dir = os.path.join(
@@ -347,25 +564,68 @@ def main():
     summary_rows = []
     all_debug_rows = []
 
-    for frame in frames:
-        print(f"=== Batch frame {args.patient_id}/{frame} ===")
-        row, eval_rows = process_frame(args, frame)
-        summary_rows.append(row)
-        for eval_row in eval_rows:
-            all_debug_rows.append(
-                {
-                    "frame": frame,
-                    "iter": eval_row["iter"],
-                    "TRE_mm": f"{float(eval_row['TRE_mm']):.10f}",
-                    "IC": eval_row["IC"],
-                    "file": eval_row["file"],
-                    "script_selected": int(
-                        row.get("status") == "ok"
-                        and int(eval_row["iter"]) == int(row["selected_iter"])
-                    ),
-                }
-            )
-        print(f"[{row['status']}] {frame}")
+    batch_config = {
+        "patient_id": args.patient_id,
+        "frames": frames,
+        "stage": args.stage,
+        "initial_pose_frame": initial_pose_frame,
+        "initial_pose_config": args.initial_pose_config,
+        "weight": args.weight,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    with open(os.path.join(batch_dir, "batch_config.json"), "w", encoding="utf-8") as file:
+        json.dump(batch_config, file, indent=2)
+
+    if args.stage in ("prepare", "all"):
+        print(f"=== Prepare {args.patient_id}: {','.join(frames)} ===")
+        prepare_rows = prepare_frames(args, frames, initial_pose_frame)
+        write_rows(
+            os.path.join(batch_dir, "prepare_summary.csv"),
+            prepare_rows,
+            ["frame", "status", "initial_pose_frame", "returncode", "missing"],
+        )
+        summary_rows.extend(prepare_rows)
+
+    if args.stage in ("annotate", "all"):
+        print(f"=== Annotate masks {args.patient_id}: {','.join(frames)} ===")
+        annotation_rows = annotate_frames(args, frames)
+        write_rows(
+            os.path.join(batch_dir, "annotation_summary.csv"),
+            annotation_rows,
+            ["frame", "status", "returncode"],
+        )
+        summary_rows.extend(annotation_rows)
+
+    if args.stage not in ("run", "all"):
+        write_rows(
+            os.path.join(batch_dir, "stage_summary.csv"),
+            summary_rows,
+            ["frame", "status", "initial_pose_frame", "returncode", "missing"],
+        )
+        print(f"[OK] batch stage results: {batch_dir}")
+        return
+
+    if args.stage in ("run", "all"):
+        summary_rows = []
+        for frame in frames:
+            print(f"=== Run frame {args.patient_id}/{frame} ===")
+            row, eval_rows = run_frame(args, frame)
+            summary_rows.append(row)
+            for eval_row in eval_rows:
+                all_debug_rows.append(
+                    {
+                        "frame": frame,
+                        "iter": eval_row["iter"],
+                        "TRE_mm": f"{float(eval_row['TRE_mm']):.10f}",
+                        "IC": eval_row["IC"],
+                        "file": eval_row["file"],
+                        "script_selected": int(
+                            row.get("status") == "ok"
+                            and int(eval_row["iter"]) == int(row["selected_iter"])
+                        ),
+                    }
+                )
+            print(f"[{row['status']}] {frame}")
 
     ok_rows = [row for row in summary_rows if row.get("status") == "ok"]
     tre_values = [float(row["selected_TRE_mm"]) for row in ok_rows]
@@ -377,6 +637,8 @@ def main():
         "ic_pass_count": int(sum(ic_values)),
         "ic_pass_rate": float(sum(ic_values) / len(ic_values)) if ic_values else None,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "initial_pose_frame": initial_pose_frame,
+        "stage": args.stage,
         "note": (
             "The average uses only script-selected final outputs. "
             "Post-hoc best iterations are reported but never used for inference selection."
