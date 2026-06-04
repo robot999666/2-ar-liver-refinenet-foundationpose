@@ -29,6 +29,10 @@ DA2_CHECKPOINT_PATH = os.environ.get(
     "DA2_CHECKPOINT_PATH",
     os.path.join(WEIGHTS_ROOT, f"depth_anything_v2_{DA2_ENCODER}.pth"),
 )
+REFINENET_PRETRAINED_PATH = os.environ.get(
+    "AR_PRETRAINED_WEIGHT_PATH",
+    os.path.join(WEIGHTS_ROOT, "refinenet_patient1_02_best.pth"),
+)
 
 
 def case_dir(case_root=None):
@@ -47,5 +51,41 @@ def contour_dir(case_root=None):
     return os.path.join(case_dir(case_root), "contours")
 
 
+def mask_dir(case_root=None):
+    return os.path.join(case_dir(case_root), "masks")
+
+
 def result_dir(result_root=None):
     return os.path.join(result_root or RESULT_ROOT, PATIENT_ID, FRAME_ID)
+
+
+def logs_dir(result_root=None):
+    return os.path.join(result_dir(result_root), "logs")
+
+
+def checkpoints_dir(result_root=None):
+    return os.path.join(result_dir(result_root), "checkpoints")
+
+
+def refinenet_weight_path(result_root=None):
+    explicit = os.environ.get("AR_WEIGHT_PATH")
+    if explicit:
+        return explicit
+    trained = os.path.join(checkpoints_dir(result_root), "best.pth")
+    return trained if os.path.exists(trained) else REFINENET_PRETRAINED_PATH
+
+
+def training_dir(result_root=None):
+    return os.path.join(result_dir(result_root), "training")
+
+
+def inference_dir(result_root=None):
+    return os.path.join(result_dir(result_root), "inference")
+
+
+def evaluation_dir(result_root=None):
+    return os.path.join(result_dir(result_root), "evaluation")
+
+
+def mask_qa_dir(result_root=None):
+    return os.path.join(result_dir(result_root), "mask_qa")

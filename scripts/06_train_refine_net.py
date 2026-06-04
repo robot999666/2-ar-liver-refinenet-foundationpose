@@ -51,7 +51,9 @@ class Config:
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
     CASE_ROOT = _cc.CASE_ROOT
-    RESULT_DIR = _cc.result_dir()
+    LOG_DIR = _cc.logs_dir()
+    CHECKPOINT_DIR = _cc.checkpoints_dir()
+    TRAINING_DIR = _cc.training_dir()
 
     BATCH_SIZE = int(os.environ.get("AR_BATCH_SIZE", "32"))
     ACCUMULATION_STEPS = 1
@@ -59,6 +61,7 @@ class Config:
     NUM_EPOCHS = int(os.environ.get("AR_NUM_EPOCHS", "50"))
     NUM_WORKERS = int(os.environ.get("AR_NUM_WORKERS", "4"))
     SEED = _cc.SEED
+    RESUME = os.environ.get("AR_RESUME", "0").lower() in ("1", "true", "yes")
 
     ROT_REP = "6d"
     TRANS_SCALE = 50.0
@@ -354,13 +357,22 @@ def main():
     val_dir = os.path.join(case_dir, "sample", "val")
     liver_path = os.path.join(case_dir, "models", "Liver_obj.ply")
 
-    logger = setup_logger(cfg.RESULT_DIR)
+    os.makedirs(cfg.CHECKPOINT_DIR, exist_ok=True)
+    os.makedirs(cfg.TRAINING_DIR, exist_ok=True)
+    logger = setup_logger(cfg.LOG_DIR)
     logger.info("=== 06. Train rigid pose offset network ===")
     logger.info("Seed: %d", cfg.SEED)
+    logger.info("Checkpoints: %s", cfg.CHECKPOINT_DIR)
+    logger.info("Training artifacts: %s", cfg.TRAINING_DIR)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_dataset = PoseDataset(train_dir, is_train=True)
     val_dataset = PoseDataset(val_dir, is_train=False)
+    if len(train_dataset) == 0 or len(val_dataset) == 0:
+        raise RuntimeError(
+            "Train and validation datasets must both be non-empty. "
+            "Regenerate samples with scripts/03_render_pose_samples.py."
+        )
     if train_dataset.uses_explicit_pairs != val_dataset.uses_explicit_pairs:
         raise RuntimeError("Train/val pair mode mismatch. Regenerate both splits with 03_render_pose_samples.py.")
 
@@ -409,8 +421,9 @@ def main():
     start_epoch = 0
     best_val_loss = float('inf')
     train_losses, val_losses = [], []
-    last_ckpt_path = os.path.join(cfg.RESULT_DIR, "last.pth")
-    if os.path.exists(last_ckpt_path):
+    last_ckpt_path = os.path.join(cfg.CHECKPOINT_DIR, "last.pth")
+    logger.info("Resume requested: %s", cfg.RESUME)
+    if cfg.RESUME and os.path.exists(last_ckpt_path):
         checkpoint = torch.load(last_ckpt_path, map_location=device)
         ckpt_mode = checkpoint.get('config', {}).get('dataset_mode')
         legacy_random_ckpt = ckpt_mode is None and dataset_mode == "random_pairs_legacy"
@@ -430,6 +443,8 @@ def main():
                 ckpt_mode or "legacy_unknown",
                 dataset_mode,
             )
+    elif cfg.RESUME:
+        logger.warning("[Resume] requested but checkpoint does not exist: %s", last_ckpt_path)
 
     for epoch in range(start_epoch, cfg.NUM_EPOCHS):
         logger.info(f"--- Epoch [{epoch+1}/{cfg.NUM_EPOCHS}] LR={optimizer.param_groups[0]['lr']:.2e} ---")
@@ -496,7 +511,7 @@ def main():
 
         train_losses.append(avg_train_loss)
         val_losses.append(avg_val_loss)
-        plot_loss_curves(train_losses, val_losses, cfg.RESULT_DIR)
+        plot_loss_curves(train_losses, val_losses, cfg.TRAINING_DIR)
         scheduler.step(avg_val_loss)
 
         is_best = avg_val_loss < best_val_loss
@@ -527,8 +542,8 @@ def main():
         torch.save(checkpoint_state, last_ckpt_path)
         logger.info(f"[Checkpoint] saved/resumable: {last_ckpt_path}")
         if is_best:
-            torch.save(model.state_dict(), os.path.join(cfg.RESULT_DIR, "best.pth"))
-            torch.save(checkpoint_state, os.path.join(cfg.RESULT_DIR, "best_full.pth"))
+            torch.save(model.state_dict(), os.path.join(cfg.CHECKPOINT_DIR, "best.pth"))
+            torch.save(checkpoint_state, os.path.join(cfg.CHECKPOINT_DIR, "best_full.pth"))
             logger.info(f"[*] Best checkpoint saved. Val SurfaceMSE={best_val_loss:.4f}")
 
 

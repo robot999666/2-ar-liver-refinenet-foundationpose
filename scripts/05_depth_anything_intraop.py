@@ -1,7 +1,11 @@
+"""Generate audited and masked DA2 depth for one real intra-operative frame."""
+
+import json
 import os
 import sys
 
 import cv2
+import numpy as np
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_DIR = os.path.join(PROJECT_ROOT, "src")
@@ -10,16 +14,13 @@ if SRC_DIR not in sys.path:
 
 from shared import case_config
 from shared.da2_engine import get_estimator, save_depth_preview, save_raw_depth
-
-
-# ============================================================
-# 05_depth_anything_intraop.py
-# ------------------------------------------------------------
-# 对去畸变术中图 lap_undist.png 运行 Depth Anything V2，
-# 保存原始深度 depth/da2_intraop.npy（无任何后处理）
-#
-# 直接运行：python 05_depth_anything_intraop.py
-# ============================================================
+from shared.intraop_masks import (
+    depth_quality,
+    mask_fingerprints,
+    quality_summary,
+    validate_case_masks,
+    validate_depth_quality,
+)
 
 
 def main():
@@ -28,8 +29,11 @@ def main():
     os.makedirs(depth_dir, exist_ok=True)
 
     lap_path = os.path.join(case_dir, "image", "lap_undist.png")
+    raw_npy = os.path.join(depth_dir, "da2_intraop_raw.npy")
+    raw_vis = os.path.join(depth_dir, "da2_intraop_raw_preview.png")
     out_npy = os.path.join(depth_dir, "da2_intraop.npy")
     out_vis = os.path.join(depth_dir, "da2_intraop_preview.png")
+    quality_path = os.path.join(depth_dir, "da2_intraop_quality.json")
 
     print("=== 05. Depth Anything on intra-op lap_undist ===")
     print(f"  frame: {case_config.PATIENT_ID}/{case_config.FRAME_ID}")
@@ -38,14 +42,59 @@ def main():
     if lap is None:
         raise FileNotFoundError(f"Run 01_prepare_case.py first. Missing: {lap_path}")
 
-    estimator = get_estimator()
-    depth = estimator.infer(lap)
-    save_raw_depth(depth, out_npy)
-    save_depth_preview(depth, out_vis)
+    full_liver_mask, depth_valid_mask, mask_quality = validate_case_masks(
+        case_dir,
+        expected_shape=lap.shape[:2],
+    )
+    print(f"[OK] masks: {quality_summary(mask_quality)}")
 
-    print(f"[OK] raw depth: {out_npy}  shape={depth.shape}  range=[{depth.min():.4f}, {depth.max():.4f}]")
-    print(f"[OK] preview only: {out_vis}")
-    print("[Next] python 06_train_refine_net.py")
+    estimator = get_estimator()
+    raw_depth = estimator.infer(lap).astype(np.float32)
+    if raw_depth.shape != lap.shape[:2]:
+        raise RuntimeError(
+            f"DA2 depth shape mismatch: got {raw_depth.shape}, expected {lap.shape[:2]}."
+        )
+
+    masked_depth = raw_depth.copy()
+    masked_depth[depth_valid_mask <= 0] = 0.0
+    depth_stats = depth_quality(raw_depth, masked_depth, full_liver_mask, depth_valid_mask)
+    validate_depth_quality(depth_stats)
+
+    save_raw_depth(raw_depth, raw_npy)
+    save_depth_preview(raw_depth, raw_vis)
+    save_raw_depth(masked_depth, out_npy)
+    save_depth_preview(masked_depth, out_vis, mask=depth_valid_mask > 0)
+    with open(quality_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "mask_quality": mask_quality,
+                "mask_fingerprints": mask_fingerprints(full_liver_mask, depth_valid_mask),
+                "depth_quality": depth_stats,
+                "semantics": {
+                    "da2_intraop_raw.npy": "Unmasked raw DA2 output retained for audit only.",
+                    "da2_intraop.npy": (
+                        "DA2 depth with all pixels outside depth_valid_mask set to zero."
+                    ),
+                },
+            },
+            f,
+            indent=2,
+        )
+
+    print(
+        f"[OK] audit raw depth: {raw_npy}  shape={raw_depth.shape}  "
+        f"range=[{raw_depth.min():.4f}, {raw_depth.max():.4f}]"
+    )
+    print(
+        "[OK] inference depth: %s  valid/image=%.4f valid/full=%.4f valid/depth_mask=%.4f"
+        % (
+            out_npy,
+            depth_stats["masked_depth_valid_ratio"],
+            depth_stats["masked_depth_valid_to_full_ratio"],
+            depth_stats["masked_depth_valid_to_depth_valid_mask_ratio"],
+        )
+    )
+    print(f"[OK] quality report: {quality_path}")
 
 
 if __name__ == "__main__":

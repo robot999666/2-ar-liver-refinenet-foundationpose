@@ -1,0 +1,11 @@
+__pycache__
+*.py[cod]
+.git
+.idea
+.vscode
+data_case
+result
+tests
+docs
+archives
+

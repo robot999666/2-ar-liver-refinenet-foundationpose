@@ -1,4 +1,4 @@
-# Runtime dependencies for scripts 01-07 and 11.
+# Runtime dependencies for scripts 01-08.
 # Install CUDA-enabled PyTorch separately or use the Dockerfile.
 
 numpy==1.26.4

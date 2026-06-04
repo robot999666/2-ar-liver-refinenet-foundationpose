@@ -1,11 +1,7 @@
-# External Weights
+# weights
 
-This repository stores `result/Patient1/02/best.pth` directly. It is about 87.9 MB and stays below GitHub's 100 MB per-file hard limit.
+- `depth_anything_v2_vitl.pth`：Depth Anything V2 Large 官方权重。
+- `refinenet_patient1_02_best.pth`：当前固定 RefineNet 最佳权重；当当前病例没有新训练权重时作为默认回退。
 
-Depth Anything V2 is not committed because `depth_anything_v2_vitl.pth` is about 1.34 GB. Put it here before running scripts 04, 05, 07, or 11:
+大权重文件不纳入普通 Git 历史。
 
-```bash
-weights/depth_anything_v2_vitl.pth
-```
-
-The default path is configured in `src/shared/case_config.py` through `DA2_CHECKPOINT_PATH`.

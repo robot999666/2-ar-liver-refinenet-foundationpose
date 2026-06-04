@@ -1,14 +1,13 @@
 # Shared Modules
 
-These modules support the scripts in `scripts/`.
-
 | Module | Purpose |
 | --- | --- |
-| `case_config.py` | Central project paths and patient/frame defaults. |
-| `da2_engine.py` | Depth Anything V2 loading and inference wrapper. |
-| `depth_augment.py` | Depth preprocessing and training augmentation. |
+| `case_config.py` | Central paths, patient/frame defaults, seeds, weights, and result layout. |
+| `da2_engine.py` | Depth Anything V2 loading and inference. |
+| `depth_augment.py` | Shared depth normalization and training augmentation. |
+| `evaluation.py` | Python TRE/IC evaluation used by script 08. |
+| `intraop_masks.py` | Real-frame mask semantics, validation, provenance, and QA overlays. |
 | `pose_render.py` | Open3D raycast rendering for contours, masks, and DA2 RGB inputs. |
 
-Edit `case_config.py` or environment variables such as `PATIENT_ID`,
-`FRAME_ID`, `CASE_ROOT`, `DATA_ROOT`, `RESULT_ROOT`, `DA2_PROJECT_DIR`, and
-`DA2_CHECKPOINT_PATH` to switch cases or paths.
+Common overrides include `PATIENT_ID`, `FRAME_ID`, `AR_SEED`,
+`AR_WEIGHT_PATH`, `CASE_ROOT`, `DATA_ROOT`, `RESULT_ROOT`, and `WEIGHTS_ROOT`.

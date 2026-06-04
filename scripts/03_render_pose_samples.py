@@ -137,6 +137,15 @@ def make_pair(renderer, base_state, total_pixels, cfg):
 def main():
     cfg = Config()
     np.random.seed(cfg.SEED)
+    if cfg.NUM_PAIRS < 2:
+        raise ValueError("AR_NUM_SAMPLES must be at least 2 so train and val are both non-empty.")
+    train_pair_count = int(round(cfg.NUM_PAIRS * cfg.TRAIN_RATIO))
+    train_pair_count = min(max(train_pair_count, 1), cfg.NUM_PAIRS - 1)
+    split_plan = np.array(
+        ["train"] * train_pair_count + ["val"] * (cfg.NUM_PAIRS - train_pair_count),
+        dtype=object,
+    )
+    np.random.default_rng(cfg.SEED).shuffle(split_plan)
 
     case_dir = case_config.case_dir(cfg.CASE_ROOT)
     image_path = os.path.join(case_dir, "image", "lap_undist.png")
@@ -197,7 +206,7 @@ def main():
             continue
 
         pair_type, state_A, state_B = result
-        split = "train" if np.random.rand() < cfg.TRAIN_RATIO else "val"
+        split = str(split_plan[accepted])
         pair_id = f"pair_{accepted:05d}"
         data = split_data[split]
         save_pair(data["dir"], data["labels"], data["pairs"], pair_id, pair_type, state_A, state_B)

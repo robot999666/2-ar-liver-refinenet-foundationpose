@@ -18,7 +18,7 @@ class Config:
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
     CASE_ROOT = _cc.CASE_ROOT
-    DEBUG_DIR = os.path.join(_cc.result_dir(), "debug")
+    DEBUG_DIR = os.path.join(_cc.result_dir(), "preprocess")
     RENDER_CONTOUR_THICKNESS = _cc.CONTOUR_THICKNESS
 
     DEFAULT_POSE = {

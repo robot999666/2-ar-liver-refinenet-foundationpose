@@ -1,7 +1,0 @@
-=== 05. Depth Anything on intra-op lap_undist ===
-  frame: Patient1/07
-xFormers not available
-xFormers not available
-[OK] raw depth: /workspace/AR/data_case/Patient1/07/depth/da2_intraop.npy  shape=(270, 480)  range=[62.6530, 483.7324]
-[OK] preview only: /workspace/AR/data_case/Patient1/07/depth/da2_intraop_preview.png
-[Next] python 06_train_refine_net.py
