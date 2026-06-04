@@ -1,4 +1,10 @@
-"""Batch preprocessing, inference, and Python TRE/IC evaluation."""
+"""Batch preprocessing, inference, and post-hoc Python TRE/IC evaluation.
+
+Every selected frame uses the canonical result/<patient_id>/<frame_id> layout.
+Evaluation runs only after script 07 chooses its final pose, so TRE/IC cannot
+influence inference selection. Script 01b remains an intentional manual step;
+frames without a validated mask bundle stop during mask preflight.
+"""
 
 import argparse
 import csv
@@ -41,10 +47,8 @@ def parse_frames(text):
 
 
 def frame_paths(patient_id, frame, case_root=None, result_root=None):
-    case_root = case_root or case_config.CASE_ROOT
-    result_root = result_root or case_config.RESULT_ROOT
-    case_dir = os.path.join(case_root, patient_id, frame)
-    result_dir = os.path.join(result_root, patient_id, frame)
+    case_dir = case_config.case_dir(case_root, patient_id, frame)
+    result_dir = case_config.result_dir(result_root, patient_id, frame)
     return {
         "case": case_dir,
         "result": result_dir,

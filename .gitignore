@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .idea/
 .vscode/
+tests/_runtime/
 
 # Generated case data and results are reproducible and intentionally excluded.
 data_case/*
@@ -14,5 +15,6 @@ result/*
 # the much larger DA2 checkpoint and wheelhouse are protected by checksums
 # and explicit restore commands documented in MANIFEST.md.
 archives/*.zip
+archives/wheelhouse/
 weights/*.pth
 !weights/refinenet_patient1_02_best.pth

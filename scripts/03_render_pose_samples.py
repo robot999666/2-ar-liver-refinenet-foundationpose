@@ -1,3 +1,9 @@
+"""Render deterministic explicit A/B pairs for rigid offset training.
+
+base_to_target pairs teach coarse correction from the initial pose.
+local_refine pairs teach small correction near a sampled target pose.
+"""
+
 import json
 import os
 import sys
@@ -16,24 +22,38 @@ from shared.pose_render import PoseSampleRenderer, euler_to_matrix
 
 
 class Config:
+    """Script-03 sampling settings.
+
+    Translation ranges are millimetres and rotation ranges are degrees.
+    Changing these values changes the training distribution and must be
+    recorded with the resulting checkpoint.
+    """
+
     PATIENT_ID = case_config.PATIENT_ID
     FRAME_ID = case_config.FRAME_ID
     CASE_ROOT = case_config.CASE_ROOT
 
+    # Total explicit pairs and deterministic non-empty train/validation split.
     NUM_PAIRS = int(os.environ.get("AR_NUM_SAMPLES", "5000"))
     TRAIN_RATIO = float(os.environ.get("AR_TRAIN_RATIO", "0.9"))
     SEED = case_config.SEED
 
+    # Broad target-pose distribution shared by both pair types.
     GLOBAL_TRANS_RANGE_MM = float(os.environ.get("AR_TRANS_RANGE_MM", "50.0"))
     GLOBAL_ROT_RANGE_DEG = float(os.environ.get("AR_ROT_RANGE_DEG", "20.0"))
+
+    # Small A-to-B perturbation used only by local_refine pairs.
     LOCAL_TRANS_RANGE_MM = float(os.environ.get("AR_LOCAL_TRANS_RANGE_MM", "5.0"))
     LOCAL_ROT_RANGE_DEG = float(os.environ.get("AR_LOCAL_ROT_RANGE_DEG", "3.0"))
     LOCAL_REFINE_RATIO = float(os.environ.get("AR_LOCAL_REFINE_RATIO", "0.7"))
 
+    # Reject unusable renders before saving a pair.
     MIN_VISIBLE_TYPES = 2
     MIN_MASK_RATIO = 0.02
     MAX_MASK_RATIO = 0.95
     RENDER_CONTOUR_THICKNESS = case_config.CONTOUR_THICKNESS
+
+    # 0 resolves to NUM_PAIRS * 50 attempts; failure is reported explicitly.
     MAX_ATTEMPTS = int(os.environ.get("AR_MAX_ATTEMPTS", "0"))
 
 

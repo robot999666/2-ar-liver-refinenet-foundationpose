@@ -1,3 +1,5 @@
+"""Create and audit the initial object-to-camera pose for one prepared frame."""
+
 import json
 import os
 import sys
@@ -15,12 +17,23 @@ from shared.pose_render import PoseSampleRenderer, euler_to_matrix
 
 
 class Config:
+    """Script-02 settings.
+
+    Translation is in millimetres. Rotation is Euler degrees converted as
+    Rz @ Ry @ Rx. initial_pose.json and AR_TVIEW_* values override the fallback
+    pose, and their provenance is saved in T_view_meta.json.
+    """
+
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
     CASE_ROOT = _cc.CASE_ROOT
+
+    # Debug images are result artifacts, not generated case inputs.
     DEBUG_DIR = os.path.join(_cc.result_dir(), "preprocess")
     RENDER_CONTOUR_THICKNESS = _cc.CONTOUR_THICKNESS
 
+    # Used only when neither a per-frame JSON file nor environment overrides
+    # are present.
     DEFAULT_POSE = {
         "TX": 6.0,
         "TY": 27.0,

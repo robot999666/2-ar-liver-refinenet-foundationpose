@@ -35,6 +35,17 @@ from shared.intraop_masks import (
 
 
 class Config:
+    """Script-07 inference settings.
+
+    The default policy reads no TRE/IC ground truth, keeps image-space proxy
+    scores diagnostic-only, selects the last safe accepted pose, and treats
+    missing or stale real-frame masks/depth as hard errors.
+
+    Proxy-based acceptance, stopping, or selection requires the explicit
+    AR_ALLOW_UNVALIDATED_SCORE_CONTROL=1 ablation switch.
+    """
+
+    # Case, shared input contract, and checkpoint. TRANS_SCALE must match 06.
     INFER_PROFILE = os.environ.get("AR_INFER_PROFILE", "paper_translation_stop1mm_last")
     PATIENT_ID = case_config.PATIENT_ID
     FRAME_ID = case_config.FRAME_ID
@@ -43,8 +54,12 @@ class Config:
     IMG_SIZE = case_config.IMG_SIZE
     TRANS_SCALE = 50.0
 
+    # Iteration budget and model-residual convergence threshold.
     MAX_ITER = int(os.environ.get("AR_MAX_ITER", "10"))
     STOP_TRANS_MM = float(os.environ.get("AR_STOP_TRANS_MM", "1.0"))
+
+    # First applied step = base damping * FIRST_STEP_DAMPING. Later steps use
+    # REFINE_* directly. damp_offset() clips factors to [0, 1].
     TRANS_DAMPING = float(os.environ.get("AR_TRANS_DAMPING", "0.4"))
     ROT_DAMPING = float(os.environ.get("AR_ROT_DAMPING", "0.4"))
     FIRST_STEP_DAMPING = float(os.environ.get("AR_FIRST_STEP_DAMPING", "0.75"))
@@ -53,11 +68,13 @@ class Config:
     MAX_STEP_TRANS_MM = float(os.environ.get("AR_MAX_STEP_TRANS_MM", "0.0"))
     MAX_STEP_ROT_DEG = float(os.environ.get("AR_MAX_STEP_ROT_DEG", "0.0"))
 
+    # Hard divergence guards. STOP_DRIFT_MM=0 disables only that optional guard.
     DIVERGE_RAW_TRANS_MM = float(os.environ.get("AR_DIVERGE_RAW_TRANS_MM", "120.0"))
     DIVERGE_RAW_ROT_DEG = float(os.environ.get("AR_DIVERGE_RAW_ROT_DEG", "45.0"))
     DIVERGE_POSE_TRANS_MM = float(os.environ.get("AR_DIVERGE_POSE_TRANS_MM", "200.0"))
     STOP_DRIFT_MM = float(os.environ.get("AR_STOP_DRIFT_MM", "0.0"))
 
+    # Unvalidated proxy controls. Defaults keep every proxy diagnostic-only.
     RAW_SCORE_ROT_WEIGHT = float(os.environ.get("AR_RAW_SCORE_ROT_WEIGHT", "5.0"))
     RAW_WORSEN_PATIENCE = int(os.environ.get("AR_RAW_WORSEN_PATIENCE", "0"))
     RAW_WORSEN_MIN_DELTA = float(os.environ.get("AR_RAW_WORSEN_MIN_DELTA", "0.5"))
@@ -69,8 +86,11 @@ class Config:
         "AR_ALLOW_UNVALIDATED_SCORE_CONTROL", "0"
     ).lower() in ("1", "true", "yes")
 
+    # Image-space diagnostics; these are not validated TRE/IC surrogates.
     CONTOUR_SCORE_MAX_DIST_PX = float(os.environ.get("AR_CONTOUR_SCORE_MAX_DIST_PX", "50.0"))
     CONTOUR_SCORE_MASK_WEIGHT = float(os.environ.get("AR_CONTOUR_SCORE_MASK_WEIGHT", "20.0"))
+
+    # Pose composition convention and explicit missing-depth ablation switch.
     UPDATE_MODE = os.environ.get("AR_UPDATE_MODE", "right")
     ALLOW_ZERO_DEPTH = os.environ.get("AR_ALLOW_ZERO_DEPTH", "0").lower() in ("1", "true", "yes")
 

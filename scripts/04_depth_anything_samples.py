@@ -1,3 +1,10 @@
+"""Generate raw Depth Anything V2 arrays for rendered training samples.
+
+Stored *_depth.npy arrays are raw DA2 outputs. Normalization is deferred to the
+shared train/validation/inference input pipeline so every mode uses the same
+deterministic mapping before train-only augmentation.
+"""
+
 import argparse
 import glob
 import json
@@ -14,16 +21,6 @@ if SRC_DIR not in sys.path:
 
 from shared import case_config
 from shared.da2_engine import get_estimator, save_raw_depth
-
-
-# ============================================================
-# 04_depth_anything_samples.py
-# ------------------------------------------------------------
-# 对 03 保存的 *_rgb.png 批量跑 Depth Anything V2，写出原始深度 *_depth.npy
-# （不做归一化、不翻转、不取倒数）
-#
-# 直接运行：python 04_depth_anything_samples.py
-# ============================================================
 
 
 def load_prefixes(split_dir):

@@ -1,4 +1,9 @@
-"""Generate audited and masked DA2 depth for one real intra-operative frame."""
+"""Generate audited and masked DA2 depth for one real intra-operative frame.
+
+Requires a validated manual mask bundle from script 01b. The unmasked raw DA2
+output is retained only for audit. Inference depth is zero outside
+depth_valid_mask, and mask fingerprints let script 07 reject stale depth.
+"""
 
 import json
 import os

@@ -1,0 +1,10 @@
+frame,status,selected_iter,stop_reason,selected_TRE_mm,selected_IC,posthoc_best_iter,posthoc_best_TRE_mm,posthoc_best_IC,selected_is_posthoc_best,returncode,missing
+02,ok,6,raw_score_no_improve,8.7662422487,1,6,8.7662422487,1,1,,
+03,ok,6,raw_score_no_improve,9.8263950988,1,6,9.8263950988,1,1,,
+04,ok,10,raw_score_no_improve,15.5117007152,0,6,10.3043818515,0,0,,
+05,skipped_missing_inputs,,,,,,,,,,lap_image=/workspace/AR/src_data/Dataset/Patient1/Lap Images/05.png; calibration=/workspace/AR/src_data/Dataset/Patient1/LUS Calibration and Pose/05.mat; seg_json=/workspace/AR/src_data/Dataset/Patient1/LUS Segmentation/json/05.json; contours=/workspace/AR/src_data/contours_and_models/Patient1/Annotations/05/koo/contours.xml
+06,ok,6,raw_score_no_improve,14.1526742949,0,6,14.1526742949,0,1,,
+07,ok,6,raw_score_no_improve,13.5746702138,0,6,13.5746702138,0,1,,
+08,ok,7,raw_score_no_improve,19.4491154855,0,7,19.4491154855,0,1,,
+09,ok,5,raw_score_no_improve,27.2290811678,0,5,27.2290811678,0,1,,
+10,ok,5,raw_score_no_improve,29.1875652044,0,5,29.1875652044,0,1,,

@@ -1,3 +1,10 @@
+"""Prepare one source frame and its models for the rigid-pose pipeline.
+
+Reads only from src_data and writes generated artifacts to
+data_case/<patient_id>/<frame_id>. Changing its resolution, contour thickness,
+or coordinate conventions requires regenerating every downstream artifact.
+"""
+
 import os
 import json
 import sys
@@ -12,41 +19,34 @@ SRC_DIR = os.path.join(PROJECT_ROOT, "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-# ============================================================
-# 01_prepare_case.py
-# ------------------------------------------------------------
-# 读取 DATA、去畸变、多轮廓 rasterize、中心化 Liver/Tumour 模型。
-# 直接运行：python 01_prepare_case.py
-# 输出：data_case/{PATIENT_ID}/{FRAME_ID}/...
-# ============================================================
-
-
 from shared import case_config as _cc
 
 
 class Config:
-    # -------- 可修改 Case 配置（默认见 shared/case_config.py）--------
+    """Script-01 settings; shared values are documented in case_config."""
+
+    # Source-frame selection. Override with PATIENT_ID and FRAME_ID.
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
 
-    # -------- 输入路径 --------
+    # Read-only source-data root and generated-case output root.
     DATA_ROOT = _cc.DATA_ROOT
-    LAP_IMAGE_NAME = f"{FRAME_ID}.png"
-    # -------- 输出路径 --------
     CASE_ROOT = _cc.CASE_ROOT
     ANNOTATOR = _cc.ANNOTATOR
+    LAP_IMAGE_NAME = f"{FRAME_ID}.png"
 
-    # 去畸变 alpha：0 裁剪黑边，1 保留所有像素
+    # OpenCV undistortion alpha: 0 crops black borders; 1 keeps all pixels.
     UNDISTORT_ALPHA = 0.0
 
-    # 全流程统一工作分辨率。后续采样、训练、推理都使用该分辨率和对应内参。
+    # Canonical downstream resolution. A change invalidates generated contours,
+    # masks, depth arrays, samples, and checkpoints.
     WORK_WIDTH = _cc.WORK_WIDTH
     WORK_HEIGHT = _cc.WORK_HEIGHT
 
-    # 轮廓 rasterize 参数
+    # Must match rendered contour thickness in scripts 02, 03, and 07.
     CONTOUR_THICKNESS = _cc.CONTOUR_THICKNESS
 
-    # XML 坐标从 (1,1) 开始；OpenCV 使用 0-based
+    # Published XML coordinates are one-based; OpenCV arrays are zero-based.
     XML_COORDINATE_IS_ONE_BASED = True
 
 

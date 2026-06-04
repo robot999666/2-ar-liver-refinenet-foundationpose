@@ -1,3 +1,10 @@
+"""Train the rigid RefineNet pose-offset model from explicit script-03 pairs.
+
+The dataset reads rendered contours, masks, and raw DA2 depth from scripts 03
+and 04. Train/validation/inference share deterministic depth normalization;
+only the training branch applies stochastic augmentation.
+"""
+
 import os
 import sys
 import json
@@ -38,23 +45,24 @@ from shared import case_config as _cc
 from shared.depth_augment import augment_depth, depth_for_network_eval
 
 
-# ============================================================
-# 06_train_refine_net.py
-# ------------------------------------------------------------
-# 读取 03+04 样本（raw DA2 depth）；训练时动态 A/B + 概率增强。
-# 深度增强含 p=0.5 随机区间归一化到 [0,255]（见 shared/depth_augment.py）。
-# 直接运行：python 06_train_refine_net.py
-# ============================================================
-
-
 class Config:
+    """Script-06 training settings.
+
+    Shared path/input-contract values come from case_config. Training starts
+    fresh unless AR_RESUME=1 is explicitly set. Important checkpoint
+    compatibility fields are saved in best_full.pth and last.pth.
+    """
+
     PATIENT_ID = _cc.PATIENT_ID
     FRAME_ID = _cc.FRAME_ID
     CASE_ROOT = _cc.CASE_ROOT
+
+    # Persistent training outputs under result/<patient_id>/<frame_id>.
     LOG_DIR = _cc.logs_dir()
     CHECKPOINT_DIR = _cc.checkpoints_dir()
     TRAINING_DIR = _cc.training_dir()
 
+    # Runtime and optimization controls.
     BATCH_SIZE = int(os.environ.get("AR_BATCH_SIZE", "32"))
     ACCUMULATION_STEPS = 1
     LR = 1e-4
@@ -63,12 +71,13 @@ class Config:
     SEED = _cc.SEED
     RESUME = os.environ.get("AR_RESUME", "0").lower() in ("1", "true", "yes")
 
+    # Model/output conventions. TRANS_SCALE must match script 07.
     ROT_REP = "6d"
     TRANS_SCALE = 50.0
     NUM_SAMPLED_PTS = 2000
     IMG_SIZE = _cc.IMG_SIZE
 
-    # 动态增强参数
+    # Train-only contour/mask augmentation settings.
     CONTOUR_ELASTIC_ALPHA = 10
     CONTOUR_ELASTIC_SIGMA = 4
     MASK_AUG_PROB = 0.5
