@@ -2,6 +2,9 @@
 
 这个仓库是 Patient1 肝脏 AR 配准实验的干净可复现副本。它保留核心脚本、源数据、最佳模型权重、固定 seed 和最终结果表，删除了训练样本、depth cache、预测中间文件、旧 sweep 和历史归档。
 
+## 数据
+https://encov.ip.uca.fr/ab/code_and_datasets/datasets/llr_reg_evaluation_by_lus/index.php
+
 ## 内容
 
 - `scripts/01_prepare_case.py` 到 `scripts/07_infer_export_stl.py`: 主流程脚本
@@ -17,7 +20,11 @@
 
 ## 外部权重
 
-Depth Anything V2 的大权重没有提交到 GitHub，因为文件约 1.34GB。运行 `04`、`05`、`07` 或 `11` 前，请把它放到：
+Depth Anything V2 的大权重
+
+https://github.com/DepthAnything/Depth-Anything-V2
+
+没有提交到 GitHub，因为文件约 1.34GB。运行 `04`、`05`、`07` 或 `11` 前，请把它放到：
 
 ```bash
 weights/depth_anything_v2_vitl.pth
